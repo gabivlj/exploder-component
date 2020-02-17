@@ -46,20 +46,21 @@ public class Exploder : MonoBehaviour
     
     #region MonoBehaviour
     
-    void Start()
+    private void Start()
     {
         _particles = new Particle[poolSize];
         Vector3 pos = transform.position;
         for (int i = 0; i < poolSize; ++i)
         {
             _particles[i].instance = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            _particles[i].instance.transform.position = pos;
+            _particles[i].instance.transform.SetParent(transform);
             _particles[i].originalPos = pos;
             _particles[i].instance.SetActive(false);
+
         }
     }
     
-    void Update()
+    private void Update()
     {
         if (!_moving) return;
         float dt = Time.deltaTime;
@@ -104,7 +105,7 @@ public class Exploder : MonoBehaviour
 
     private Vector3 EpicFormula(Vector3 originalP)
     {
-        Vector3 r = originalP;
+        Vector3 r = originalP + new Vector3;
         return r;
     }
 
