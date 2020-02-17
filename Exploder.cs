@@ -1,18 +1,21 @@
-﻿using System;
-using UnityEngine;
+﻿using UnityEngine;
 using Random = UnityEngine.Random;
 using Vector3 = UnityEngine.Vector3;
 
 
 /// <summary>
 /// Exploder script that imitates a particle system in the desired GameObject.
+///
+/// Recommended values for epic explosion: Gravity: -50.0f, Speed: 100.0f, Impulse: 10.0f, Pool Size: 50 - 100
+/// For slower explosions decrement the values. We recommend that the impulse stays between 5-10f
+///
 /// </summary>
 public class Exploder : MonoBehaviour
 {
-    #region Private
+    #region Structs
 
     /// <summary>
-    /// Represents a Particle
+    /// Represents a Particle in our Script.
     /// </summary>
     private struct Particle
     {
@@ -20,16 +23,39 @@ public class Exploder : MonoBehaviour
         public Vector3    OriginalPos;
         public Vector3    Dir;
     }
+
+    #endregion
     
+    #region Private
+
+    
+    /// <summary>
+    /// How many particles
+    /// </summary>
     [SerializeField] private int   poolSize;
+    /// <summary>
+    /// Gravity. Self explanatory.
+    /// </summary>
     [SerializeField] private float gravity = 9.8f;
+    /// <summary>
+    /// Speed of the explosion. Bigger values bigger explosions
+    /// </summary>
     [SerializeField] private float speed = 3.0f;
+    /// <summary>
+    /// Beginning impulse for the explosion for bigger initial velocities.
+    /// Recommended values: 5-10f
+    /// </summary>
+    [SerializeField] private float impulse = 10.0f;
+    /// <summary>
+    /// Vertical spreading. X represents the min. value and Y the max. value
+    /// </summary>
+    [SerializeField] private Vector2 verticalSpread = new Vector2(-10f, 20f);
     
-    private float        _resetTime;
+    
     private Vector3      _acceleration;
-    
     private Vector3      _velocity;
     private Particle[]   _particles;
+    private float        _resetTime;
     private float        _elapsedT;
     private bool         _moving;
     
@@ -51,24 +77,12 @@ public class Exploder : MonoBehaviour
     
     #region MonoBehaviour
     
-    private void Start()
+    private void Awake()
     {
         _particles = new Particle[poolSize];
-        Vector3 pos = transform.position;
-        for (int i = 0; i < poolSize; ++i)
-        {
-            float dir = (i / 180) * 2 * Mathf.PI;
-            print(dir);
-            float sign = Mathf.Sign(Random.Range(-1, 1));
-            _particles[i].Instance = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            _particles[i].Dir = new Vector3(Mathf.Cos(dir), Random.Range(2f, 5f), Mathf.Cos(dir)).normalized;
-            _particles[i].Instance.transform.SetParent(transform);
-            _particles[i].OriginalPos = pos;
-            _particles[i].Instance.SetActive(false);
-
-        }
+        Initialize();
     }
-    
+
     private void Update()
     {
         if (!_moving) return;
@@ -77,6 +91,7 @@ public class Exploder : MonoBehaviour
         if (_elapsedT >= _resetTime)
         {
             _moving = false;
+            SetActive(false);
             return;
         }
         for (int i = 0; i < poolSize; ++i)
@@ -92,10 +107,13 @@ public class Exploder : MonoBehaviour
     /// <summary>
     /// Starts the animation (if it's not started yet)
     /// </summary>
-    public void StartAnimation(float sResetTime)
+    /// <param name="resetTime">How many seconds until the animation stops</param>
+    /// <param name="resetRandomValues">If you want a different explosion every time this is called (This comes with more computational cost)</param>
+    public void StartAnimation(float resetTime, bool resetRandomValues = true)
     {
         if (_moving) return;
-        _resetTime     = sResetTime;
+        if (resetRandomValues) Initialize();
+        _resetTime     = resetTime;
         _moving = true;
         _elapsedT = 0.0f;
         SetActive(true);
@@ -105,6 +123,34 @@ public class Exploder : MonoBehaviour
     
     #region Private Methods
 
+    /// <summary>
+    /// Initializes the explosion
+    /// </summary>
+    private void Initialize()
+    {
+        Vector3 pos = transform.position;
+        float delta = 2f * Mathf.PI / poolSize;
+        float theta = 0.0f;
+        for (int i = 0; i < poolSize; ++i)
+        {
+            _particles[i].Instance = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            _particles[i].Dir = new Vector3(
+                (impulse + Random.Range(-0.5f * impulse, 0.5f * impulse)) * Mathf.Cos(theta), 
+                Random.Range(verticalSpread.x, verticalSpread.y),
+                (impulse + Random.Range(-0.5f * impulse, 0.5f * impulse)) * Mathf.Sin(theta)
+            ).normalized;
+            _particles[i].Instance.transform.SetParent(transform);
+            _particles[i].OriginalPos = pos;
+            _particles[i].Instance.SetActive(false);
+            theta += delta;
+
+        }
+    }
+
+    /// <summary>
+    /// Sets the active variable in the particles gameObjects
+    /// </summary>
+    /// <param name="active">Activate or deactivate</param>
     private void SetActive(bool active)
     {
         for (int i = 0; i < poolSize; ++i)
@@ -116,9 +162,9 @@ public class Exploder : MonoBehaviour
     /// <summary>
     /// Formula that returns the next position of a particle
     /// </summary>
-    /// <param name="originalP"></param>
-    /// <param name="dir"></param>
-    /// <returns></returns>
+    /// <param name="originalP">Original position of the particle</param>
+    /// <param name="dir">Direction of the particle</param>
+    /// <returns>The next position frame</returns>
     private Vector3 CalculateNextFrame(Vector3 originalP, Vector3 dir)
     {
         _acceleration = Vector3.up * (0.5f * gravity * _elapsedT * _elapsedT);
@@ -130,7 +176,7 @@ public class Exploder : MonoBehaviour
     /// <summary>
     /// Updates desired particle
     /// </summary>
-    /// <param name="particle"></param>
+    /// <param name="particle">The particle to update</param>
     private void UpdateParticle(Particle particle)
     {
         particle.Instance.transform.position = CalculateNextFrame(particle.OriginalPos, particle.Dir);
