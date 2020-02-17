@@ -4,7 +4,16 @@ using UnityEngine;
 
 public class Exploder : MonoBehaviour
 {
-    // Start is called before the first frame update
+    #region Private
+    
+    #endregion
+
+    #region Public
+    
+
+    #endregion
+    
+    #region MonoBehaviour
     void Start()
     {
         
@@ -15,4 +24,14 @@ public class Exploder : MonoBehaviour
     {
         
     }
+    
+    #endregion
+    
+    #region Public Methods
+    
+    #endregion
+    
+    #region Private Methods
+    
+    #endregion
 }
