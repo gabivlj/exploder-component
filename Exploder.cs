@@ -1,4 +1,6 @@
-﻿using UnityEngine;
+﻿using System;
+using UnityEngine;
+using Random = UnityEngine.Random;
 using Vector3 = UnityEngine.Vector3;
 
 
@@ -14,15 +16,18 @@ public class Exploder : MonoBehaviour
     /// </summary>
     private struct Particle
     {
-        public GameObject instance;
-        public Vector3    originalPos;
+        public GameObject Instance;
+        public Vector3    OriginalPos;
+        public Vector3    Dir;
     }
     
-    [SerializeField] private Vector3 speed;
-    [SerializeField] private Vector3 acceleration;
     [SerializeField] private int   poolSize;
-    [SerializeField] private float resetTime;
-
+    [SerializeField] private float gravity = 9.8f;
+    [SerializeField] private float speed = 3.0f;
+    
+    private float        _resetTime;
+    private Vector3      _acceleration;
+    
     private Vector3      _velocity;
     private Particle[]   _particles;
     private float        _elapsedT;
@@ -52,10 +57,14 @@ public class Exploder : MonoBehaviour
         Vector3 pos = transform.position;
         for (int i = 0; i < poolSize; ++i)
         {
-            _particles[i].instance = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            _particles[i].instance.transform.SetParent(transform);
-            _particles[i].originalPos = pos;
-            _particles[i].instance.SetActive(false);
+            float dir = (i / 180) * 2 * Mathf.PI;
+            print(dir);
+            float sign = Mathf.Sign(Random.Range(-1, 1));
+            _particles[i].Instance = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            _particles[i].Dir = new Vector3(Mathf.Cos(dir), Random.Range(2f, 5f), Mathf.Cos(dir)).normalized;
+            _particles[i].Instance.transform.SetParent(transform);
+            _particles[i].OriginalPos = pos;
+            _particles[i].Instance.SetActive(false);
 
         }
     }
@@ -65,7 +74,7 @@ public class Exploder : MonoBehaviour
         if (!_moving) return;
         float dt = Time.deltaTime;
         _elapsedT += dt;
-        if (_elapsedT >= resetTime)
+        if (_elapsedT >= _resetTime)
         {
             _moving = false;
             return;
@@ -83,9 +92,10 @@ public class Exploder : MonoBehaviour
     /// <summary>
     /// Starts the animation (if it's not started yet)
     /// </summary>
-    public void StartAnimation()
+    public void StartAnimation(float sResetTime)
     {
         if (_moving) return;
+        _resetTime     = sResetTime;
         _moving = true;
         _elapsedT = 0.0f;
         SetActive(true);
@@ -99,13 +109,21 @@ public class Exploder : MonoBehaviour
     {
         for (int i = 0; i < poolSize; ++i)
         {
-            _particles[i].instance.SetActive(active);
+            _particles[i].Instance.SetActive(active);
         }
     }
 
-    private Vector3 EpicFormula(Vector3 originalP)
+    /// <summary>
+    /// Formula that returns the next position of a particle
+    /// </summary>
+    /// <param name="originalP"></param>
+    /// <param name="dir"></param>
+    /// <returns></returns>
+    private Vector3 CalculateNextFrame(Vector3 originalP, Vector3 dir)
     {
-        Vector3 r = originalP + new Vector3;
+        _acceleration = Vector3.up * (0.5f * gravity * _elapsedT * _elapsedT);
+        _velocity = dir * (speed * _elapsedT);
+        Vector3 r = originalP + _velocity + _acceleration;
         return r;
     }
 
@@ -115,7 +133,7 @@ public class Exploder : MonoBehaviour
     /// <param name="particle"></param>
     private void UpdateParticle(Particle particle)
     {
-        particle.instance.transform.position = EpicFormula(particle.originalPos);
+        particle.Instance.transform.position = CalculateNextFrame(particle.OriginalPos, particle.Dir);
     }
     #endregion
 }
